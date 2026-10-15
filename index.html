@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CarStudio: a century of cars, one per decade</title>
+<meta name="description" content="Eleven landmark cars from 1924 to 2020, as real 3D models scaled to factory dimensions, with blueprints drawn from the geometry.">
+<script type="module" src="vendor/model-viewer.min.js"></script>
+<script src="cars.js"></script>
+<style>
+@font-face{font-family:"Big Shoulders Display";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/big-shoulders-display-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Big Shoulders Display";font-weight:800;font-style:normal;font-display:swap;src:url(fonts/big-shoulders-display-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Big Shoulders Display";font-weight:900;font-style:normal;font-display:swap;src:url(fonts/big-shoulders-display-latin-900-normal.woff2) format("woff2")}
+@font-face{font-family:"Instrument Sans";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/instrument-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Instrument Sans";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/instrument-sans-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Instrument Sans";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/instrument-sans-latin-600-normal.woff2) format("woff2")}
+:root{
+  --cyc:#E3E6EA;        /* studio cyclorama */
+  --cyc-deep:#C9CED6;
+  --ink:#16191F;
+  --ink-2:#5A616D;
+  --rule:#B7BDC7;
+  --paper:#F6F7F9;
+  --livery:#1B4D9E;     /* set per car */
+  --livery-ink:#fff;
+  --display:"Big Shoulders Display",Impact,sans-serif;
+  --text:"Instrument Sans",system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.7,.1,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--cyc);color:var(--ink);font:400 15px/1.5 var(--text);-webkit-font-smoothing:antialiased;
+  display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px}
+a{color:inherit;text-underline-offset:3px}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px clamp(16px,3vw,40px);position:relative;z-index:5}
+.mark{font:800 26px/1 var(--display);letter-spacing:.01em;margin:0}
+.mark span{font-weight:500;color:var(--ink-2)}
+.mode{display:flex;background:var(--paper);border-radius:999px;padding:4px;box-shadow:inset 0 0 0 1px var(--rule)}
+.mode button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-weight:500;font-size:14px;color:var(--ink-2);transition:background .2s,color .2s}
+.mode button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+
+/* stage */
+.studio{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0}
+.stage{position:relative;min-height:440px;overflow:hidden;
+  background:radial-gradient(120% 80% at 50% 105%, color-mix(in oklab,var(--livery) 22%, var(--cyc-deep)) 0%, var(--cyc) 62%);
+  transition:background .6s var(--ease)}
+.year{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);margin:0;pointer-events:none;user-select:none;
+  font:900 clamp(160px,30vw,460px)/.8 var(--display);letter-spacing:-.01em;color:var(--livery);opacity:.9;white-space:nowrap;
+  transition:color .6s var(--ease)}
+.year.swap{animation:yearIn .7s var(--ease)}
+@keyframes yearIn{from{opacity:0;transform:translate(-50%,-38%)}to{opacity:.9;transform:translate(-50%,-50%)}}
+model-viewer{position:absolute;inset:0;width:100%;height:100%;background:transparent;--poster-color:transparent;--progress-bar-color:transparent}
+.load{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--ink);transition:width .2s,opacity .4s;z-index:3}
+.sheet{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:clamp(12px,3vw,36px);background:#0d2f5c;overflow:auto}
+.sheet img{max-width:100%;max-height:100%;display:block;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);cursor:zoom-in}
+.sheet.zoom{align-items:flex-start;justify-content:flex-start}
+.sheet.zoom img{max-width:none;max-height:none;width:2400px;cursor:zoom-out}
+.sheet .caveat{position:absolute;left:16px;bottom:14px;margin:0;color:#cfe0f5;font-size:13px;background:rgba(5,25,50,.7);padding:6px 10px;border-radius:6px}
+.studio[data-mode=sheet] .sheet{display:flex}
+.studio[data-mode=sheet] model-viewer,.studio[data-mode=sheet] .year,.studio[data-mode=sheet] .views,.studio[data-mode=sheet] .title{display:none}
+
+.title{position:absolute;left:clamp(16px,3vw,40px);bottom:72px;z-index:2;max-width:60%}
+.title h2{margin:0;font:800 clamp(34px,4.6vw,64px)/.92 var(--display);letter-spacing:.005em}
+.title p{margin:8px 0 0;color:var(--ink-2);font-size:15px}
+.views{position:absolute;left:clamp(16px,3vw,40px);bottom:20px;display:flex;gap:4px;z-index:2}
+.views button{border:1px solid var(--rule);background:color-mix(in srgb,var(--paper) 80%,transparent);backdrop-filter:blur(6px);
+  padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500}
+.views button:hover{border-color:var(--ink)}
+.step{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid var(--rule);
+  background:var(--paper);font-size:20px;line-height:1;display:grid;place-items:center}
+.step:hover{border-color:var(--ink)}
+.step.prev{left:14px}.step.next{right:14px}
+
+/* spec panel */
+.spec{background:var(--paper);border-left:1px solid var(--rule);padding:28px 26px;overflow:auto;display:flex;flex-direction:column;gap:22px}
+.chip{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.chip i{width:14px;height:14px;border-radius:3px;background:var(--livery);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.engine{font:500 22px/1.15 var(--display);margin:4px 0 0}
+.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.figs div{background:var(--paper);padding:10px 12px}
+.figs b{display:block;font:800 22px/1 var(--display);white-space:nowrap}
+.figs span{font-size:12px;color:var(--ink-2)}
+.dims h3,.credit h3{font-size:14px;font-weight:600;margin:0 0 10px}
+.dim{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:10px;font-size:14px;margin:0 0 9px;font-variant-numeric:tabular-nums}
+.dim .lab{color:var(--ink-2)}
+.dim .track{position:relative;height:6px;background:var(--cyc);border-radius:3px}
+.dim .track i{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:3px;transition:width .6s var(--ease)}
+.dim .track em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--livery);transition:left .6s var(--ease)}
+.legend{font-size:12px;color:var(--ink-2);display:flex;gap:16px;margin-top:4px}
+.legend span::before{content:"";display:inline-block;width:10px;height:6px;border-radius:2px;background:var(--ink);margin-right:6px;vertical-align:middle}
+.legend span+span::before{width:2px;height:10px;background:var(--livery)}
+.credit p{margin:0 0 8px;font-size:13px;color:var(--ink-2)}
+.credit p strong{color:var(--ink);font-weight:600}
+
+/* century ruler */
+.ruler{position:relative;padding:14px clamp(16px,3vw,40px) 18px;background:var(--paper);border-top:1px solid var(--rule)}
+.ruler-track{position:relative;height:78px}
+.ticks{position:absolute;left:0;right:0;bottom:22px;height:22px;
+  background:
+   repeating-linear-gradient(90deg,var(--rule) 0 1px,transparent 1px calc(100%/110)) bottom/100% 9px no-repeat;
+  border-bottom:1px solid var(--ink)}
+.dec{position:absolute;bottom:0;padding-top:0;}
+.dec::before{content:"";position:absolute;left:50%;bottom:22px;width:1px;height:18px;background:var(--ink)}
+.dec{font:500 14px/1 var(--display);color:var(--ink-2);transform:translateX(-50%)}
+.pin{position:absolute;bottom:22px;transform:translateX(-50%);border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pin .nm{font-size:12px;font-weight:500;white-space:nowrap;color:var(--ink-2);padding:3px 7px;border-radius:4px;transition:background .2s,color .2s}
+.pin .st{width:2px;height:26px;background:var(--ink-2);transition:height .3s var(--ease),background .3s}
+.pin:hover .nm{color:var(--ink)}
+.pin[aria-current=true] .nm{background:var(--ink);color:var(--paper)}
+.pin[aria-current=true] .st{height:34px;background:var(--ink)}
+.pin:nth-of-type(even) .nm{margin-bottom:22px}
+.pin:nth-of-type(even) .st{height:48px}
+.pin:nth-of-type(even)[aria-current=true] .st{height:56px}
+.ruler-track{height:110px}
+
+@media (max-width:900px){
+  .studio{grid-template-columns:1fr}
+  .stage{height:62vh;min-height:380px}
+  .spec{border-left:0;border-top:1px solid var(--rule)}
+  .title{max-width:80%;bottom:64px}
+  .ruler{overflow-x:auto}
+  .ruler-track{min-width:900px;margin:0 44px}
+  .bar{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1 class="mark">CarStudio <span>1924 to 2020</span></h1>
+  <div class="mode" role="group" aria-label="What to show">
+    <button data-mode="model" aria-pressed="true">3D model</button>
+    <button data-mode="bp" aria-pressed="false">Blueprint</button>
+    <button data-mode="cc" aria-pressed="false">Concept art</button>
+  </div>
+</header>
+
+<main class="studio" id="studio" data-mode="model">
+  <section class="stage" aria-label="Car viewer">
+    <p class="year" id="year" aria-hidden="true"></p>
+    <model-viewer id="mv" camera-controls touch-action="pan-y" auto-rotate auto-rotate-delay="3000" rotation-per-second="10deg"
+      shadow-intensity="1.1" shadow-softness=".8" exposure="1" environment-image="neutral" interaction-prompt="none"
+      camera-orbit="35deg 76deg auto" field-of-view="26deg"></model-viewer>
+    <div class="load" id="load"></div>
+    <div class="title"><h2 id="name"></h2><p id="sub"></p></div>
+    <div class="views" role="group" aria-label="Camera">
+      <button data-o="0deg 88deg auto">Side</button>
+      <button data-o="90deg 88deg auto">Front</button>
+      <button data-o="-90deg 88deg auto">Rear</button>
+      <button data-o="0deg 0.1deg auto">Top</button>
+      <button data-o="35deg 76deg auto">Three-quarter</button>
+    </div>
+    <button class="step prev" id="prev" aria-label="Previous decade">&#8249;</button>
+    <button class="step next" id="next" aria-label="Next decade">&#8250;</button>
+    <div class="sheet" id="sheet"><img id="sheetimg" alt=""><p class="caveat" id="caveat"></p></div>
+  </section>
+
+  <aside class="spec" id="spec" aria-live="polite"></aside>
+</main>
+
+<nav class="ruler" aria-label="Pick a car by year">
+  <div class="ruler-track" id="track"><div class="ticks"></div></div>
+</nav>
+
+<script>
+const C = window.CARS;
+const LIVERY = {
+  "1920s-bugatti-type-35":["#1B4D9E","French racing blue"],
+  "1930s-ford-deuce-coupe":["#B3261E","Hot-rod red"],
+  "1940s-willys-mb-jeep":["#5B6236","Olive drab"],
+  "1950s-mercedes-300sl":["#9AA3AE","Silver-grey metallic"],
+  "1960s-jaguar-e-type":["#0E4A33","British racing green"],
+  "1970s-lamborghini-countach":["#E0A100","Giallo Fly"],
+  "1980s-delorean-dmc-12":["#8E949B","Brushed stainless"],
+  "1990s-mclaren-f1":["#E86A10","Papaya orange"],
+  "2000s-ford-gt":["#1F3F8F","Midnight blue"],
+  "2010s-tesla-model-s":["#A3141B","Multi-coat red"],
+  "2020s-porsche-911-992":["#C8102E","Guards Red"]
+};
+const SHORT={"1930s-ford-deuce-coupe":"Ford Deuce","1950s-mercedes-300sl":"Mercedes 300 SL","1960s-jaguar-e-type":"Jaguar E-Type","1970s-lamborghini-countach":"Countach","1980s-delorean-dmc-12":"DeLorean","2010s-tesla-model-s":"Tesla Model S","2020s-porsche-911-992":"Porsche 911","1940s-willys-mb-jeep":"Willys MB","1920s-bugatti-type-35":"Bugatti T35"};
+const $ = s=>document.querySelector(s);
+const studio=$('#studio'), mv=$('#mv'), track=$('#track'), year=$('#year');
+let cur=0, mode='model';
+const mm = n => n ? Number(n).toLocaleString('en-US') : null;
+const START=1920, SPAN=110;
+
+// century ruler
+for(let d=0; d<=11; d++){
+  const y=START+d*10, s=document.createElement('span');
+  s.className='dec'; s.textContent=y; s.style.left=(d*10/SPAN*100)+'%';
+  track.appendChild(s);
+}
+C.forEach((c,i)=>{
+  const b=document.createElement('button');
+  b.className='pin'; b.style.left=((+c.year-START)/SPAN*100)+'%';
+  b.innerHTML=`<span class="nm">${c.year} ${SHORT[c.slug]||c.name}</span><span class="st"></span>`;
+  b.setAttribute('aria-label',`${c.year} ${c.name}`);
+  b.onclick=()=>show(i);
+  track.appendChild(b);
+});
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
+  studio.dataset.mode = m==='model' ? 'model' : 'sheet';
+  const c=C[cur], img=$('#sheetimg');
+  $('#sheet').classList.remove('zoom');
+  if(m==='bp'){img.src=c.blueprint;img.alt=`Blueprint of the ${c.name}`;$('#caveat').textContent='Drawn from the 3D model. Click to zoom.';}
+  if(m==='cc'){img.src=c.concept;img.alt=`Concept art of the ${c.name}`;$('#caveat').textContent='AI concept art, not to scale.';}
+}
+document.querySelectorAll('.mode button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$('#sheetimg').onclick=()=>$('#sheet').classList.toggle('zoom');
+document.querySelectorAll('.views button').forEach(b=>b.onclick=()=>{
+  mv.autoRotate=false; mv.cameraOrbit=b.dataset.o; mv.cameraTarget='auto auto auto'; mv.fieldOfView='26deg';
+});
+$('#prev').onclick=()=>show((cur-1+C.length)%C.length);
+$('#next').onclick=()=>show((cur+1)%C.length);
+addEventListener('keydown',e=>{
+  if(e.target.closest('input,textarea'))return;
+  if(e.key==='ArrowRight')show((cur+1)%C.length);
+  if(e.key==='ArrowLeft')show((cur-1+C.length)%C.length);
+});
+mv.addEventListener('progress',e=>{const l=$('#load');const p=e.detail.totalProgress;l.style.width=(p*100)+'%';l.style.opacity=p>=1?0:1;});
+
+function dimRow(label, factory, model, max){
+  const f=factory||model, pf=(f/max*100).toFixed(1), pm=(model/max*100).toFixed(1);
+  const val = factory ? `${mm(factory)} mm` : `${mm(model)} mm, model`;
+  return `<div class="dim"><span class="lab">${label}</span><span class="track"><i style="width:${pf}%"></i><em style="left:calc(${pm}% - 1px)"></em></span><span>${val}</span></div>`;
+}
+
+function show(i){
+  cur=i; const c=C[i], [col,colName]=LIVERY[c.slug]||['#1B4D9E',''];
+  document.documentElement.style.setProperty('--livery',col);
+  document.querySelectorAll('.pin').forEach((b,j)=>b.setAttribute('aria-current',j===i));
+  year.textContent=c.year; year.classList.remove('swap'); void year.offsetWidth; year.classList.add('swap');
+  $('#name').textContent=c.name;
+  $('#sub').textContent=`The ${c.decade}`;
+  mv.src=c.glb; mv.alt=`3D model of the ${c.name}`; mv.cameraOrbit='35deg 76deg auto'; mv.autoRotate=true;
+  document.title=`${c.name} (${c.year}) in CarStudio`;
+  const [ml,mw,mh]=c.measured, max=4700;
+  const figs=[[c.power,'power'],[c.top_speed,'top speed'],[c.weight,'weight']].filter(x=>x[0]);
+  $('#spec').innerHTML=`
+    <div>
+      <span class="chip"><i></i>${colName}</span>
+      <p class="engine">${c.engine}</p>
+    </div>
+    ${figs.length?`<div class="figs" style="grid-template-columns:repeat(${figs.length},1fr)">${figs.map(([v,l])=>`<div><b>${v.replace(/ \(.*\)/,'')}</b><span>${l}</span></div>`).join('')}</div>`:''}
+    <div class="dims">
+      <h3>Dimensions</h3>
+      ${dimRow('Length',c.length_mm,ml,max)}
+      ${dimRow('Width',c.width_mm,mw,max)}
+      ${dimRow('Height',c.height_mm,mh,max)}
+      ${c.wheelbase_mm?`<div class="dim"><span class="lab">Wheelbase</span><span></span><span>${mm(c.wheelbase_mm)} mm</span></div>`:''}
+      <div class="legend"><span>Factory</span><span>3D model</span></div>
+    </div>
+    <div class="credit">
+      <h3>About this model</h3>
+      <p>3D model by <a href="${c.model_url}" target="_blank" rel="noopener"><strong>${c.author}</strong></a> on Sketchfab, licensed ${c.license}.</p>
+      <p>Scaled to the factory length. Width can read wider because the model includes mirrors.</p>
+    </div>`;
+  if(mode!=='model') setMode(mode);
+}
+show(0);
+</script>
+</body>
+</html>
